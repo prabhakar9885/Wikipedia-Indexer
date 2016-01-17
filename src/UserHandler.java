@@ -1,16 +1,18 @@
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.StringTokenizer;
 import java.util.TreeMap;
 
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
-import SharedDS.*;
+import SharedDS.PageInfo;
+import SharedDS.UtilFuncs;
 
 class UserHandler extends DefaultHandler {
 
@@ -19,35 +21,20 @@ class UserHandler extends DefaultHandler {
 	boolean pageIdSet = false;
 	boolean titleFound = false;
 	boolean bodyFound = false;
-	boolean redirectTitleFound = false;
+	private int curlyBracesAfterInfoBox = 0;
 
 	private int pageId = -1;
 
-	private StopWords sw = new StopWords();
-	private Stemmer stemmer = new Stemmer();
+	HashSet<String> tokensInTitle = new HashSet<String>();
+	String infoText;
+	private HashMap<String, Integer> infoboxMap = new HashMap<String, Integer>();
+	private HashMap<String, Integer> categoryMap = new HashMap<String, Integer>();
+	private HashMap<String, Integer> refMap = new HashMap<String, Integer>();
+	private HashMap<String, Integer> extLinksMap = new HashMap<String, Integer>();
 	private StringBuilder str = new StringBuilder();
+	private StringBuilder temp = new StringBuilder();
 	public FileWriter outFile;
 	public TreeMap<String, TreeMap<Integer, PageInfo>> tokenTree;
-
-	private ArrayList<String> getTokensAsList(String textStr, String delim) {
-		ArrayList<String> tokensList = new ArrayList<String>();
-		StringTokenizer strTok = new StringTokenizer(textStr, delim);
-		String temp;
-
-		while (strTok.hasMoreTokens()) {
-			temp = strTok.nextToken();
-
-			if (sw.isStopWord(temp))
-				continue;
-
-			stemmer.add(temp);
-			stemmer.stem();
-			temp = stemmer.toString();
-			if (temp.length() > 0)
-				tokensList.add(temp.trim());
-		}
-		return tokensList;
-	}
 
 	@Override
 	public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
@@ -55,15 +42,19 @@ class UserHandler extends DefaultHandler {
 		str.setLength(0);
 
 		if (qName.equalsIgnoreCase("page")) {
+			infoboxMap.clear();
+			categoryMap.clear();
+			refMap.clear();
+			extLinksMap.clear();
+			pageIdFound = pageIdSet = false;
 			pageFound = true;
 		} else if (qName.equalsIgnoreCase("id") && pageIdFound == false) {
 			pageIdFound = true;
 		} else if (qName.equalsIgnoreCase("title")) {
+			tokensInTitle.clear();
 			titleFound = true;
 		} else if (qName.equalsIgnoreCase("text")) {
 			bodyFound = true;
-		} else if (qName.equalsIgnoreCase("redirect")) {
-			redirectTitleFound = true;
 		}
 	}
 
@@ -76,31 +67,166 @@ class UserHandler extends DefaultHandler {
 			str.append(new String(ch, start, length));
 		else if (bodyFound)
 			str.append(new String(ch, start, length));
-		else if (redirectTitleFound)
-			str.append(new String(ch, start, length));
 	}
 
 	@Override
 	public void endElement(String uri, String localName, String qName) throws SAXException {
 
+		// If the Current Page is parsed, reset all the Flags and Counters.
 		if (qName.equalsIgnoreCase("page")) {
 			pageFound = pageIdSet = pageIdFound = false;
+			curlyBracesAfterInfoBox = 0;
 			return;
 		}
 
-		String s = str.toString().replaceAll("[\\W ]+", " ").toLowerCase();
-		ArrayList<String> strList = getTokensAsList(s, " ");
+		if (pageIdFound && !pageIdSet && qName.equalsIgnoreCase("id")) {
+			// If the current element is PageId, then map the tokens in the
+			// Title, to the PageId and
+			// Increment the title-tokens' titleFrequeny by 1
+			pageId = Integer.parseInt(str.toString().trim());
+			pageIdSet = true;
+			PageInfo pi = null;
+			TreeMap<Integer, PageInfo> piHastTable;
+			for (String str : tokensInTitle) {
+				if (tokenTree.containsKey(str.toString().trim())) {
+					piHastTable = tokenTree.get(str.toString().trim());
+					pi = piHastTable.get(pageId);
+					if (pi == null) {
+						pi = new PageInfo();
+						pi.titleFrequeny = 1;
+						piHastTable.put(pageId, pi);
+					} else
+						pi.titleFrequeny++;
+				} else {
+					piHastTable = new TreeMap<Integer, PageInfo>();
+					pi = new PageInfo();
+					pi.titleFrequeny = 1;
+					piHastTable.put(pageId, pi);
+					tokenTree.put(str.toString().trim(), piHastTable);
+				}
+			}
+			return;
+
+		}
+
+		//
+		String s1 = str.toString().toLowerCase();
+		String s = s1;
+
+		// Extract References, Categories and Infobox content
+		if (qName.equalsIgnoreCase("text")) {
+			// Extract refs.
+			temp.setLength(0);
+			s = s1.replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&quot;", " ");
+
+			int i = 0, n = s.length(), nextIndex = 0, endIndex = 0;
+			while (i < n && (nextIndex = s.indexOf("<ref>", nextIndex)) > -1) {
+				nextIndex += 5;
+				endIndex = s.indexOf("</ref>", nextIndex);
+				if (endIndex == -1 || nextIndex >= n)
+					break;
+				temp.append(s.substring(nextIndex, endIndex).replaceAll("(&lt;)|(&gt;)|[^a-z0-9]+", " "));
+				nextIndex = endIndex;
+			}
+
+			ArrayList<String> refTokens = UtilFuncs
+					.getTokensAsList(temp.toString().replaceAll("(&lt;)|(&gt;)|[^a-z0-9]+", " "), " ");
+
+			temp.setLength(0);
+			for (String item : refTokens)
+				if (refMap.containsKey(item))
+					refMap.put(item, refMap.get(item) + 1);
+				else
+					refMap.put(item, 1);
+
+			// Extract External Links
+			i = s.indexOf("==external links==") + 18;
+			while (i < n - 1 && (s.charAt(i) != ' ' || s.charAt(i + 1) != '*'))
+				i++;
+			while (i < n - 1 && (s.charAt(i) != '\n' || s.charAt(i + 1) != ' ')) {
+				temp.append(s.charAt(i));
+				i++;
+			}
+			ArrayList<String> extLinksTokens = UtilFuncs
+					.getTokensAsList(temp.toString().replaceAll("[^a-z0-9]+|(www)|(http:s?)", " "), " ");
+
+			temp.setLength(0);
+			for (String item : extLinksTokens)
+				if (extLinksMap.containsKey(item))
+					extLinksMap.put(item, extLinksMap.get(item) + 1);
+				else
+					extLinksMap.put(item, 1);
+
+			s = s.replaceAll("[^A-Za-z0-9]+", " ");
+			infoText = null;
+
+			// Extract Infobox content
+			n = s1.length();
+			int infoboxStartsAt = UtilFuncs.indexOf("\\{\\{infobox", s1.toString());
+			int infoboxEndsAt = 0;
+			if (infoboxStartsAt != -1) {
+				for (i = infoboxStartsAt; i < n - 1; i++) {
+					if (s1.charAt(i) == '{' && s1.charAt(i + 1) == '{')
+						curlyBracesAfterInfoBox++;
+					else if (s1.charAt(i) == '}' && s1.charAt(i + 1) == '}')
+						curlyBracesAfterInfoBox--;
+					if (curlyBracesAfterInfoBox == 0) {
+						infoboxEndsAt = i;
+						break;
+					}
+				}
+				int len = (new String("{{infobox")).length();
+				infoText = s1.substring(infoboxStartsAt + len, infoboxEndsAt).replaceAll("\\n|[a-z ]+=", " ")
+						.replaceAll("[^a-z0-9]+", " ");
+
+				ArrayList<String> infoBoxTokens = UtilFuncs.getTokensAsList(infoText.replaceAll("[^a-z0-9]+", " "),
+						" ");
+				for (String t : infoBoxTokens) {
+					if (infoboxMap.containsKey(t))
+						infoboxMap.put(t, infoboxMap.get(t) + 1);
+					else
+						infoboxMap.put(t, 1);
+				}
+				infoBoxTokens.clear();
+			}
+
+			// Extract Categories
+			int categoryStartsAt = UtilFuncs.indexOf("\\[\\[category", s1.toString());
+			if (categoryStartsAt != -1) {
+				for (i = categoryStartsAt; i < n; i++) {
+					while (i < n && s1.charAt(i) != ':' && s1.charAt(i) != ']')
+						i++;
+
+					endIndex = i;
+					while (endIndex < n && s1.charAt(endIndex) != ']')
+						endIndex++;
+
+					if (i >= n || s1.charAt(i) == ']')
+						break;
+
+					ArrayList<String> catTokens = UtilFuncs
+							.getTokensAsList(s1.substring(i, endIndex).replaceAll("[^a-z0-9]+", " "), " ");
+					for (String t : catTokens) {
+						if (categoryMap.containsKey(t))
+							categoryMap.put(t, categoryMap.get(t) + 1);
+						else
+							categoryMap.put(t, 1);
+					}
+					i = endIndex + 1;
+				}
+			}
+		}
+
+		ArrayList<String> strList = UtilFuncs.getTokensAsList(s.replaceAll("[^a-z0-9]+", " "), " ");
 
 		for (String str : strList) {
 			str = str.trim();
-			if (pageIdFound && qName.equalsIgnoreCase("id")) {
-				pageId = Integer.parseInt(str.toString().trim());
-				pageIdSet = true;
-			}
-
 			PageInfo pi = null;
+			TreeMap<Integer, PageInfo> piHastTable;
+
+			// Update the word frequency in the text/body.
 			if (tokenTree.containsKey(str.toString().trim())) {
-				TreeMap<Integer, PageInfo> piHastTable = tokenTree.get(str.toString().trim());
+				piHastTable = tokenTree.get(str.toString().trim());
 				pi = piHastTable.get(pageId);
 				if (pi == null) {
 					pi = new PageInfo();
@@ -109,22 +235,28 @@ class UserHandler extends DefaultHandler {
 				} else
 					pi.frequency++;
 			} else {
-				TreeMap<Integer, PageInfo> ht = new TreeMap<Integer, PageInfo>();
+				piHastTable = new TreeMap<Integer, PageInfo>();
 				pi = new PageInfo();
 				pi.frequency = 1;
-				ht.put(pageId, pi);
-				tokenTree.put(str.toString().trim(), ht);
+				piHastTable.put(pageId, pi);
+				if (qName.equalsIgnoreCase("title"))
+					tokensInTitle.add(str);
+				else
+					tokenTree.put(str.toString().trim(), piHastTable);
 			}
 
-			if (titleFound || redirectTitleFound) {
-				pi.tokenType |= TokenType.isTitle;
-				titleFound = redirectTitleFound = false;
-			} else if (bodyFound) {
-				pi.tokenType |= TokenType.isBodyText;
-				bodyFound = false;
+			if (qName.equalsIgnoreCase("text")) {
+				if (pi.infoboxFrequeny == 0 && infoboxMap.containsKey(str)) {
+					pi.infoboxFrequeny = infoboxMap.get(str);
+				}
+				if (pi.categoryFrequeny == 0 && categoryMap.containsKey(str)) {
+					pi.categoryFrequeny = categoryMap.get(str);
+				}
+				if (pi.refFrequeny == 0 && refMap.containsKey(str)) {
+					pi.refFrequeny = refMap.get(str);
+				}
+				piHastTable.put(pageId, pi);
 			}
-
-			redirectTitleFound = titleFound = bodyFound = false;
 		}
 	}
 
@@ -146,8 +278,15 @@ class UserHandler extends DefaultHandler {
 					continue;
 
 				outFile.write("\n" + key + ":");
+
 				for (Integer pageId : keys) {
-					outFile.write("|" + pageId + "-" + ht.get(pageId).frequency);
+					PageInfo pi = ht.get(pageId);
+					outFile.write("|" + pageId + "-" + pi.frequency
+							+ (pi.categoryFrequeny > 0 ? "C" + pi.categoryFrequeny : "")
+							+ (pi.infoboxFrequeny > 0 ? "I" + pi.infoboxFrequeny : "")
+							+ (pi.titleFrequeny > 0 ? "T" + pi.titleFrequeny : "")
+							+ (pi.refFrequeny > 0 ? "R" + pi.refFrequeny : "")
+							+ (pi.extLinkFrequeny > 0 ? "E" + pi.extLinkFrequeny : ""));
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
