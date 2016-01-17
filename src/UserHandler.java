@@ -23,6 +23,8 @@ class UserHandler extends DefaultHandler {
 
 	private int pageId = -1;
 
+	private StopWords sw = new StopWords();
+	private Stemmer stemmer = new Stemmer();
 	private StringBuilder str = new StringBuilder();
 	public FileWriter outFile;
 	public TreeMap<String, TreeMap<Integer, PageInfo>> tokenTree;
@@ -30,14 +32,12 @@ class UserHandler extends DefaultHandler {
 	private ArrayList<String> getTokensAsList(String textStr, String delim) {
 		ArrayList<String> tokensList = new ArrayList<String>();
 		StringTokenizer strTok = new StringTokenizer(textStr, delim);
-		Stemmer stemmer = new Stemmer();
 		String temp;
-		StopWords sw = new StopWords();
 
 		while (strTok.hasMoreTokens()) {
 			temp = strTok.nextToken();
 
-			if (sw.isStopWord(temp) || temp.length() >= 15)
+			if (sw.isStopWord(temp))
 				continue;
 
 			stemmer.add(temp);
@@ -88,7 +88,7 @@ class UserHandler extends DefaultHandler {
 			return;
 		}
 
-		String s = str.toString().replaceAll("[^A-Za-z0-9 ]+", " ").toLowerCase();
+		String s = str.toString().replaceAll("[\\W ]+", " ").toLowerCase();
 		ArrayList<String> strList = getTokensAsList(s, " ");
 
 		for (String str : strList) {
@@ -136,7 +136,7 @@ class UserHandler extends DefaultHandler {
 			// Stop Words elimination
 			if (key.length() <= 2)
 				continue;
-			
+
 			try {
 				TreeMap<Integer, PageInfo> ht = entry.getValue();
 				Set<Integer> keys = ht.keySet();
