@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.StringTokenizer;
 import java.util.TreeMap;
 
 import org.xml.sax.Attributes;
@@ -139,23 +140,60 @@ class UserHandler extends DefaultHandler {
 				else
 					refMap.put(item, 1);
 
+			if (pageId == 6201)
+				pageId = 6201;
+
 			// Extract External Links
 			i = s.indexOf("==external links==") + 18;
-			while (i < n - 1 && (s.charAt(i) != ' ' || s.charAt(i + 1) != '*'))
-				i++;
-			while (i < n - 1 && (s.charAt(i) != '\n' || s.charAt(i + 1) != ' ')) {
-				temp.append(s.charAt(i));
-				i++;
-			}
-			ArrayList<String> extLinksTokens = UtilFuncs
-					.getTokensAsList(temp.toString().replaceAll("[^a-z0-9]+|(www)|(http:s?)", " "), " ");
+			int categoryStartsAt = UtilFuncs.indexOf("\\[\\[category", s1.toString());
+			if (i != 17 && i < categoryStartsAt) {
 
-			temp.setLength(0);
-			for (String item : extLinksTokens)
-				if (extLinksMap.containsKey(item))
-					extLinksMap.put(item, extLinksMap.get(item) + 1);
-				else
-					extLinksMap.put(item, 1);
+				temp.setLength(0);
+				String link = null;
+				while (i < categoryStartsAt) {
+					while ( i < categoryStartsAt && s.charAt(i) != '[')
+						i++;
+					i++;
+					while (i < categoryStartsAt && s.charAt(i) != ']')
+						temp.append(s.charAt(i++));
+					temp.append(" ");
+				}
+
+				ArrayList<String> extLinksTokens = UtilFuncs
+						.getTokensAsList(temp.toString().replaceAll("[^a-z0-9]+|(www)|(http:s?)", " "), " ");
+
+				temp.setLength(0);
+				for (String item : extLinksTokens)
+					if (extLinksMap.containsKey(item))
+						extLinksMap.put(item, extLinksMap.get(item) + 1);
+					else
+						extLinksMap.put(item, 1);
+			}
+
+			// Extract Categories
+			if (categoryStartsAt != -1) {
+				for (i = categoryStartsAt; i < n; i++) {
+					while (i < n && s1.charAt(i) != ':' && s1.charAt(i) != ']')
+						i++;
+
+					endIndex = i;
+					while (endIndex < n && s1.charAt(endIndex) != ']')
+						endIndex++;
+
+					if (i >= n || s1.charAt(i) == ']')
+						break;
+
+					ArrayList<String> catTokens = UtilFuncs
+							.getTokensAsList(s1.substring(i, endIndex).replaceAll("[^a-z0-9]+", " "), " ");
+					for (String t : catTokens) {
+						if (categoryMap.containsKey(t))
+							categoryMap.put(t, categoryMap.get(t) + 1);
+						else
+							categoryMap.put(t, 1);
+					}
+					i = endIndex + 1;
+				}
+			}
 
 			s = s.replaceAll("[^A-Za-z0-9]+", " ");
 			infoText = null;
@@ -190,31 +228,6 @@ class UserHandler extends DefaultHandler {
 				infoBoxTokens.clear();
 			}
 
-			// Extract Categories
-			int categoryStartsAt = UtilFuncs.indexOf("\\[\\[category", s1.toString());
-			if (categoryStartsAt != -1) {
-				for (i = categoryStartsAt; i < n; i++) {
-					while (i < n && s1.charAt(i) != ':' && s1.charAt(i) != ']')
-						i++;
-
-					endIndex = i;
-					while (endIndex < n && s1.charAt(endIndex) != ']')
-						endIndex++;
-
-					if (i >= n || s1.charAt(i) == ']')
-						break;
-
-					ArrayList<String> catTokens = UtilFuncs
-							.getTokensAsList(s1.substring(i, endIndex).replaceAll("[^a-z0-9]+", " "), " ");
-					for (String t : catTokens) {
-						if (categoryMap.containsKey(t))
-							categoryMap.put(t, categoryMap.get(t) + 1);
-						else
-							categoryMap.put(t, 1);
-					}
-					i = endIndex + 1;
-				}
-			}
 		}
 
 		ArrayList<String> strList = UtilFuncs.getTokensAsList(s.replaceAll("[^a-z0-9]+", " "), " ");
@@ -254,6 +267,9 @@ class UserHandler extends DefaultHandler {
 				}
 				if (pi.refFrequeny == 0 && refMap.containsKey(str)) {
 					pi.refFrequeny = refMap.get(str);
+				}
+				if (pi.extLinkFrequeny == 0 && extLinksMap.containsKey(str)) {
+					pi.extLinkFrequeny = extLinksMap.get(str);
 				}
 				piHastTable.put(pageId, pi);
 			}
