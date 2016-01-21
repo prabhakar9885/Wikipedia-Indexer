@@ -102,7 +102,7 @@ class UserHandler extends DefaultHandler {
 			 * Extract refs.
 			 */
 			temp.setLength(0);
-			s = s1.replaceAll("&lt;", "<").replaceAll("&gt;", ">").replaceAll("&quot;", " ");
+			s = s1;
 
 			int i = 0, n = s.length(), nextIndex = 0, endIndex = 0;
 			while (i < n && (nextIndex = s.indexOf("<ref>", nextIndex)) > -1) {
@@ -110,10 +110,10 @@ class UserHandler extends DefaultHandler {
 				endIndex = s.indexOf("</ref>", nextIndex);
 				if (endIndex == -1 || nextIndex >= n)
 					break;
-				temp.append(s.substring(nextIndex, endIndex).replaceAll("(&lt;)|(&gt;)|[^a-z0-9]+", " "));
+				temp.append(s.substring(nextIndex, endIndex).replaceAll("[^a-z0-9]+", " "));
 				nextIndex = endIndex;
 			}
-			fillMapWithTokens(refMap, temp.toString(), "(&lt;)|(&gt;)|[^a-z0-9]+");
+			fillMapWithTokens(refMap, temp.toString(), "[^a-z0-9]+");
 			temp.setLength(0);
 
 			/*
