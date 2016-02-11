@@ -43,10 +43,16 @@ public class FileMerger {
 			values.add(new StringBuilder(str.substring(postingListStartsAt + 1)));
 		}
 
+		StringBuilder previousKey = new StringBuilder();
 		while (!buffReaderForFiles.isEmpty()) {
 
 			int minIndex = getIndexForMinFile();
-			writer.append(keys.get(minIndex)).append(":").append(values.get(minIndex)).append("\n");
+			if (previousKey.equals(keys.get(minIndex)))
+				writer.append(values.get(minIndex));
+			else
+				writer.append("\n").append(keys.get(minIndex)).append(":").append(values.get(minIndex));
+			previousKey.setLength(0);
+			previousKey.append(keys.get(minIndex));
 
 			String str = buffReaderForFiles.get(minIndex).readLine();
 			if (str == null) {
