@@ -18,13 +18,14 @@ public class Main {
 			SAXParser saxParser = factory.newSAXParser();
 			UserHandler userhandler = new UserHandler();
 
-			userhandler.OutFileName = "/home/prabhakar/IIIT-H_current/Sem 2/IRE/Mini-Project/merge/m";// args[1];
+			userhandler.OutFileName = args[1];
+			//userhandler.OutFileName = "/home/prabhakar/IIIT-H_current/Sem 2/IRE/Mini-Project/merge/m";"
 			userhandler.tokenTree = new TreeMap<String, TreeMap<Integer, PageInfo>>();
 
-			// saxParser.parse(inputFile, userhandler);
+			 saxParser.parse(inputFile, userhandler);
 
-			FileMerger fileMerger = new FileMerger(inputFile.getParent(), userhandler.OutFileName);
-			fileMerger.startMerging();
+//			FileMerger fileMerger = new FileMerger(inputFile.getParent(), userhandler.OutFileName);
+//			fileMerger.startMerging();
 
 			System.out.println("Done.");
 		} catch (Exception e) {

@@ -44,6 +44,8 @@ class UserHandler extends DefaultHandler {
 
 		if (qName.equalsIgnoreCase("page")) {
 			countOfDocs++;
+			if (countOfDocs == 58)
+				System.out.println(countOfDocs);
 			infoboxMap.clear();
 			categoryMap.clear();
 			refMap.clear();
@@ -102,41 +104,58 @@ class UserHandler extends DefaultHandler {
 			/*
 			 * Extract refs.
 			 */
+			temp.setLength(0);
 			s = s1;
 
-			int i = 0, n = s.length(), nextIndex = 0, endIndex = 0, indexOfTitle;
-			while (i < n && (nextIndex = s.indexOf("<ref", nextIndex)) > -1) {
-				nextIndex += 4;
+			int i = 0, n = s.length(), nextIndex = 0, endIndex = 0;
+			while (i < n && (nextIndex = s.indexOf("<ref>", nextIndex)) > -1) {
+				nextIndex += 5;
 				endIndex = s.indexOf("</ref>", nextIndex);
-				indexOfTitle = s.indexOf("title=", nextIndex);
-				indexOfTitle += 6;
-				if (endIndex == -1 || indexOfTitle==-1 || indexOfTitle >= endIndex) {
-					nextIndex = endIndex;
-					continue;
-				}
-				temp.setLength(0);
-				while ( indexOfTitle<endIndex && s.charAt(indexOfTitle) != '|')
-					temp.append(s.charAt(indexOfTitle++));
-				temp.append(" ");
+				if (endIndex == -1 || nextIndex >= n)
+					break;
+				temp.append(s.substring(nextIndex, endIndex).replaceAll("[^a-z0-9]+", " "));
 				nextIndex = endIndex;
 			}
 			fillMapWithTokens(refMap, temp.toString(), "[^a-z0-9]+");
 			temp.setLength(0);
-//			i = s.indexOf("==References==") + 18;
-//			int refEndsAt = UtilFuncs.indexOf("\n\n", s1.toString());
-//			if (i != 17 && i+5 < refEndsAt) {
-//				temp.setLength(0);
-//				while (i < refEndsAt) {
-//					while (i < refEndsAt && s.charAt(i)!='[' && s.charAt(i)!='*' )
-//						i++;
-//					i+=5;
-//					while (i < refEndsAt && s.charAt(i) != '|')
-//						temp.append(s.charAt(i++));
-//					temp.append(" ");
+//			s = s1;
+//
+//			int i = 0, n = s.length(), nextIndex = 0, endIndex = 0, indexOfTitle;
+//			while (nextIndex < n && (nextIndex = s.indexOf("<ref", nextIndex)) > -1) {
+//				nextIndex += 4;
+//				endIndex = s.indexOf("</ref>", nextIndex);
+//				indexOfTitle = s.indexOf("title=", nextIndex);
+//				indexOfTitle += 6;
+//				if (endIndex == -1 || indexOfTitle == -1 || indexOfTitle >= endIndex) {
+//					nextIndex = endIndex;
+//					continue;
 //				}
-//				fillMapWithTokens(extLinksMap, temp.toString(), "[^a-z0-9]+|(www)|(http:s?)");
 //				temp.setLength(0);
+//				while (indexOfTitle < endIndex && s.charAt(indexOfTitle) != '|')
+//					temp.append(s.charAt(indexOfTitle++));
+//				temp.append(" ");
+//				nextIndex = endIndex;
 //			}
+//
+//			fillMapWithTokens(refMap, temp.toString(), "[^a-z0-9]+");
+//			temp.setLength(0);
+			
+			// i = s.indexOf("==References==") + 18;
+			// int refEndsAt = UtilFuncs.indexOf("\n\n", s1.toString());
+			// if (i != 17 && i+5 < refEndsAt) {
+			// temp.setLength(0);
+			// while (i < refEndsAt) {
+			// while (i < refEndsAt && s.charAt(i)!='[' && s.charAt(i)!='*' )
+			// i++;
+			// i+=5;
+			// while (i < refEndsAt && s.charAt(i) != '|')
+			// temp.append(s.charAt(i++));
+			// temp.append(" ");
+			// }
+			// fillMapWithTokens(extLinksMap, temp.toString(),
+			// "[^a-z0-9]+|(www)|(http:s?)");
+			// temp.setLength(0);
+			// }
 
 			/*
 			 * Extract External Links
