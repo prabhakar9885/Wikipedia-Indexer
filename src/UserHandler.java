@@ -5,7 +5,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import java.util.StringTokenizer;
 import java.util.TreeMap;
 
 import org.xml.sax.Attributes;
@@ -24,7 +23,7 @@ class UserHandler extends DefaultHandler {
 	boolean bodyFound = false;
 	private int curlyBracesAfterInfoBox = 0;
 
-	private int pageId = -1;
+	private int pageId = -1, countOfDocs = 0, fileIndex = 0;
 
 	HashSet<String> tokensInTitle = new HashSet<String>();
 	String infoText;
@@ -36,6 +35,7 @@ class UserHandler extends DefaultHandler {
 	private StringBuilder temp = new StringBuilder();
 	public FileWriter outFile;
 	public TreeMap<String, TreeMap<Integer, PageInfo>> tokenTree;
+	public String OutFileName;
 
 	@Override
 	public void startElement(String uri, String localName, String qName, Attributes attributes) throws SAXException {
@@ -43,6 +43,7 @@ class UserHandler extends DefaultHandler {
 		str.setLength(0);
 
 		if (qName.equalsIgnoreCase("page")) {
+			countOfDocs++;
 			infoboxMap.clear();
 			categoryMap.clear();
 			refMap.clear();
@@ -101,20 +102,41 @@ class UserHandler extends DefaultHandler {
 			/*
 			 * Extract refs.
 			 */
-			temp.setLength(0);
 			s = s1;
 
-			int i = 0, n = s.length(), nextIndex = 0, endIndex = 0;
-			while (i < n && (nextIndex = s.indexOf("<ref>", nextIndex)) > -1) {
-				nextIndex += 5;
+			int i = 0, n = s.length(), nextIndex = 0, endIndex = 0, indexOfTitle;
+			while (i < n && (nextIndex = s.indexOf("<ref", nextIndex)) > -1) {
+				nextIndex += 4;
 				endIndex = s.indexOf("</ref>", nextIndex);
-				if (endIndex == -1 || nextIndex >= n)
-					break;
-				temp.append(s.substring(nextIndex, endIndex).replaceAll("[^a-z0-9]+", " "));
+				indexOfTitle = s.indexOf("title=", nextIndex);
+				indexOfTitle += 6;
+				if (endIndex == -1 || indexOfTitle==-1 || indexOfTitle >= endIndex) {
+					nextIndex = endIndex;
+					continue;
+				}
+				temp.setLength(0);
+				while ( indexOfTitle<endIndex && s.charAt(indexOfTitle) != '|')
+					temp.append(s.charAt(indexOfTitle++));
+				temp.append(" ");
 				nextIndex = endIndex;
 			}
 			fillMapWithTokens(refMap, temp.toString(), "[^a-z0-9]+");
 			temp.setLength(0);
+//			i = s.indexOf("==References==") + 18;
+//			int refEndsAt = UtilFuncs.indexOf("\n\n", s1.toString());
+//			if (i != 17 && i+5 < refEndsAt) {
+//				temp.setLength(0);
+//				while (i < refEndsAt) {
+//					while (i < refEndsAt && s.charAt(i)!='[' && s.charAt(i)!='*' )
+//						i++;
+//					i+=5;
+//					while (i < refEndsAt && s.charAt(i) != '|')
+//						temp.append(s.charAt(i++));
+//					temp.append(" ");
+//				}
+//				fillMapWithTokens(extLinksMap, temp.toString(), "[^a-z0-9]+|(www)|(http:s?)");
+//				temp.setLength(0);
+//			}
 
 			/*
 			 * Extract External Links
@@ -173,10 +195,12 @@ class UserHandler extends DefaultHandler {
 					}
 				}
 				int len = (new String("{{infobox")).length();
-				infoText = s1.substring(infoboxStartsAt + len, infoboxEndsAt).replaceAll("\\n|[a-z ]+=", " ")
-						.replaceAll("[^a-z0-9]+", " ");
+				if (infoboxStartsAt + len < infoboxEndsAt) {
+					infoText = s1.substring(infoboxStartsAt + len, infoboxEndsAt).replaceAll("\\n|[a-z ]+=", " ")
+							.replaceAll("[^a-z0-9]+", " ");
 
-				fillMapWithTokens(infoboxMap, infoText, "[^a-z0-9]+");
+					fillMapWithTokens(infoboxMap, infoText, "[^a-z0-9]+");
+				}
 			}
 
 		}
@@ -213,6 +237,17 @@ class UserHandler extends DefaultHandler {
 
 			if (qName.equalsIgnoreCase("text")) {
 				updateFrequeniesInPagInfoObj(token, pi, piTreeMap);
+			}
+		}
+
+		if (countOfDocs == 20000) {
+			try {
+				saveTodisk();
+				tokenTree.clear();
+				countOfDocs = 0;
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
 			}
 		}
 	}
@@ -279,6 +314,20 @@ class UserHandler extends DefaultHandler {
 	}
 
 	public void endDocument() throws SAXException {
+
+		try {
+			if (countOfDocs != 0)
+				saveTodisk();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
+	private void saveTodisk() throws IOException {
+
+		outFile = new FileWriter(OutFileName + fileIndex);
+		fileIndex++;
 
 		for (Map.Entry<String, TreeMap<Integer, PageInfo>> entry : tokenTree.entrySet()) {
 			String key = entry.getKey();

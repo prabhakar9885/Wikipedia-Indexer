@@ -1,5 +1,4 @@
 import java.io.File;
-import java.io.FileWriter;
 import java.util.TreeMap;
 
 import javax.xml.parsers.SAXParser;
@@ -19,18 +18,21 @@ public class Main {
 			SAXParser saxParser = factory.newSAXParser();
 			UserHandler userhandler = new UserHandler();
 
-			userhandler.outFile = new FileWriter(args[1]);
+			userhandler.OutFileName = "/home/prabhakar/IIIT-H_current/Sem 2/IRE/Mini-Project/merge/m";// args[1];
 			userhandler.tokenTree = new TreeMap<String, TreeMap<Integer, PageInfo>>();
 
-			saxParser.parse(inputFile, userhandler);
+			// saxParser.parse(inputFile, userhandler);
+
+			FileMerger fileMerger = new FileMerger(inputFile.getParent(), userhandler.OutFileName);
+			fileMerger.startMerging();
 
 			System.out.println("Done.");
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		
+
 		long lEndTime = System.currentTimeMillis();
-		System.out.println("Elapsed milliseconds: " + (lEndTime-lStartTime)/1000 );		
+		System.out.println("Elapsed milliseconds: " + (lEndTime - lStartTime) / 1000);
 	}
 
 }
