@@ -16,6 +16,7 @@ import SharedDS.UtilFuncs;
 
 class UserHandler extends DefaultHandler {
 
+	private static final int BLOCK_SIZE = 20000;
 	boolean pageFound = false;
 	boolean pageIdFound = false;
 	boolean pageIdSet = false;
@@ -44,8 +45,6 @@ class UserHandler extends DefaultHandler {
 
 		if (qName.equalsIgnoreCase("page")) {
 			countOfDocs++;
-			if (countOfDocs == 58)
-				System.out.println(countOfDocs);
 			infoboxMap.clear();
 			categoryMap.clear();
 			refMap.clear();
@@ -105,94 +104,72 @@ class UserHandler extends DefaultHandler {
 			 * Extract refs.
 			 */
 			temp.setLength(0);
-			s = s1;
-
 			int i = 0, n = s.length(), nextIndex = 0, endIndex = 0;
-			while (i < n && (nextIndex = s.indexOf("<ref>", nextIndex)) > -1) {
-				nextIndex += 5;
-				endIndex = s.indexOf("</ref>", nextIndex);
-				if (endIndex == -1 || nextIndex >= n)
-					break;
-				temp.append(s.substring(nextIndex, endIndex).replaceAll("[^a-z0-9]+", " "));
-				nextIndex = endIndex;
+			s = s1;
+			try {
+				while (i < n && (nextIndex = s.indexOf("<ref>", nextIndex)) > -1) {
+					nextIndex += 5;
+					endIndex = s.indexOf("</ref>", nextIndex);
+					if (endIndex == -1 || nextIndex >= n)
+						break;
+					temp.append(s.substring(nextIndex, endIndex).replaceAll("[^a-z0-9]+", " "));
+					nextIndex = endIndex;
+				}
+				fillMapWithTokens(refMap, temp.toString(), "[^a-z0-9]+");
+				temp.setLength(0);
+			} catch (Exception ex) {
+				System.out.println("Eternal Ref Exception: " + ex.getMessage());
+				System.out.println("DocId: " + pageId);
+				System.out.println("Stack trace" + ex.getStackTrace());
 			}
-			fillMapWithTokens(refMap, temp.toString(), "[^a-z0-9]+");
-			temp.setLength(0);
-//			s = s1;
-//
-//			int i = 0, n = s.length(), nextIndex = 0, endIndex = 0, indexOfTitle;
-//			while (nextIndex < n && (nextIndex = s.indexOf("<ref", nextIndex)) > -1) {
-//				nextIndex += 4;
-//				endIndex = s.indexOf("</ref>", nextIndex);
-//				indexOfTitle = s.indexOf("title=", nextIndex);
-//				indexOfTitle += 6;
-//				if (endIndex == -1 || indexOfTitle == -1 || indexOfTitle >= endIndex) {
-//					nextIndex = endIndex;
-//					continue;
-//				}
-//				temp.setLength(0);
-//				while (indexOfTitle < endIndex && s.charAt(indexOfTitle) != '|')
-//					temp.append(s.charAt(indexOfTitle++));
-//				temp.append(" ");
-//				nextIndex = endIndex;
-//			}
-//
-//			fillMapWithTokens(refMap, temp.toString(), "[^a-z0-9]+");
-//			temp.setLength(0);
-			
-			// i = s.indexOf("==References==") + 18;
-			// int refEndsAt = UtilFuncs.indexOf("\n\n", s1.toString());
-			// if (i != 17 && i+5 < refEndsAt) {
-			// temp.setLength(0);
-			// while (i < refEndsAt) {
-			// while (i < refEndsAt && s.charAt(i)!='[' && s.charAt(i)!='*' )
-			// i++;
-			// i+=5;
-			// while (i < refEndsAt && s.charAt(i) != '|')
-			// temp.append(s.charAt(i++));
-			// temp.append(" ");
-			// }
-			// fillMapWithTokens(extLinksMap, temp.toString(),
-			// "[^a-z0-9]+|(www)|(http:s?)");
-			// temp.setLength(0);
-			// }
 
 			/*
 			 * Extract External Links
 			 */
 			i = s.indexOf("==external links==") + 18;
 			int categoryStartsAt = UtilFuncs.indexOf("\\[\\[category", s1.toString());
-			if (i != 17 && i < categoryStartsAt) {
-				temp.setLength(0);
-				while (i < categoryStartsAt) {
-					while (i < categoryStartsAt && s.charAt(i) != '[')
+			try {
+				if (i != 17 && i < categoryStartsAt) {
+					temp.setLength(0);
+					while (i < categoryStartsAt) {
+						while (i < categoryStartsAt && s.charAt(i) != '[')
+							i++;
 						i++;
-					i++;
-					while (i < categoryStartsAt && s.charAt(i) != ']')
-						temp.append(s.charAt(i++));
-					temp.append(" ");
+						while (i < categoryStartsAt && s.charAt(i) != ']')
+							temp.append(s.charAt(i++));
+						temp.append(" ");
+					}
+					fillMapWithTokens(extLinksMap, temp.toString(), "[^a-z0-9]+|(www)|(http:s?)");
+					temp.setLength(0);
 				}
-				fillMapWithTokens(extLinksMap, temp.toString(), "[^a-z0-9]+|(www)|(http:s?)");
-				temp.setLength(0);
+			} catch (Exception ex) {
+				System.out.println("Eternal Ref Exception: " + ex.getMessage());
+				System.out.println("DocId: " + pageId);
+				System.out.println("Stack trace" + ex.getStackTrace());
 			}
 
 			/*
 			 * Extract Categories
 			 */
-			if (categoryStartsAt != -1) {
-				for (i = categoryStartsAt; i < n; i++) {
-					while (i < n && s1.charAt(i) != ':' && s1.charAt(i) != ']')
-						i++;
-					endIndex = i;
-					while (endIndex < n && s1.charAt(endIndex) != ']')
-						endIndex++;
-					if (i >= n || s1.charAt(i) == ']')
-						break;
-					fillMapWithTokens(categoryMap, s1.substring(i, endIndex), "[^a-z0-9]+");
-					i = endIndex + 1;
+			try {
+				if (categoryStartsAt != -1) {
+					for (i = categoryStartsAt; i < n; i++) {
+						while (i < n && s1.charAt(i) != ':' && s1.charAt(i) != ']')
+							i++;
+						endIndex = i;
+						while (endIndex < n && s1.charAt(endIndex) != ']')
+							endIndex++;
+						if (i >= n || s1.charAt(i) == ']')
+							break;
+						fillMapWithTokens(categoryMap, s1.substring(i, endIndex), "[^a-z0-9]+");
+						i = endIndex + 1;
+					}
 				}
+			} catch (Exception ex) {
+				System.out.println("Eternal Ref Exception: " + ex.getMessage());
+				System.out.println("DocId: " + pageId);
+				System.out.println("Stack trace" + ex.getStackTrace());
 			}
-
 			s = s.replaceAll("[^A-Za-z0-9]+", " ");
 			infoText = null;
 
@@ -200,26 +177,32 @@ class UserHandler extends DefaultHandler {
 			 * Extract Infobox content
 			 */
 			n = s1.length();
-			int infoboxStartsAt = UtilFuncs.indexOf("\\{\\{infobox", s1.toString());
-			int infoboxEndsAt = 0;
-			if (infoboxStartsAt != -1) {
-				for (i = infoboxStartsAt; i < n - 1; i++) {
-					if (s1.charAt(i) == '{' && s1.charAt(i + 1) == '{')
-						curlyBracesAfterInfoBox++;
-					else if (s1.charAt(i) == '}' && s1.charAt(i + 1) == '}')
-						curlyBracesAfterInfoBox--;
-					if (curlyBracesAfterInfoBox == 0) {
-						infoboxEndsAt = i;
-						break;
+			try {
+				int infoboxStartsAt = UtilFuncs.indexOf("\\{\\{infobox", s1.toString());
+				int infoboxEndsAt = 0;
+				if (infoboxStartsAt != -1) {
+					for (i = infoboxStartsAt; i < n - 1; i++) {
+						if (s1.charAt(i) == '{' && s1.charAt(i + 1) == '{')
+							curlyBracesAfterInfoBox++;
+						else if (s1.charAt(i) == '}' && s1.charAt(i + 1) == '}')
+							curlyBracesAfterInfoBox--;
+						if (curlyBracesAfterInfoBox == 0) {
+							infoboxEndsAt = i;
+							break;
+						}
+					}
+					int len = (new String("{{infobox")).length();
+					if (infoboxStartsAt + len < infoboxEndsAt) {
+						infoText = s1.substring(infoboxStartsAt + len, infoboxEndsAt).replaceAll("\\n|[a-z ]+=", " ")
+								.replaceAll("[^a-z0-9]+", " ");
+
+						fillMapWithTokens(infoboxMap, infoText, "[^a-z0-9]+");
 					}
 				}
-				int len = (new String("{{infobox")).length();
-				if (infoboxStartsAt + len < infoboxEndsAt) {
-					infoText = s1.substring(infoboxStartsAt + len, infoboxEndsAt).replaceAll("\\n|[a-z ]+=", " ")
-							.replaceAll("[^a-z0-9]+", " ");
-
-					fillMapWithTokens(infoboxMap, infoText, "[^a-z0-9]+");
-				}
+			} catch (Exception ex) {
+				System.out.println("Eternal Ref Exception: " + ex.getMessage());
+				System.out.println("DocId: " + pageId);
+				System.out.println("Stack trace" + ex.getStackTrace());
 			}
 
 		}
@@ -259,7 +242,7 @@ class UserHandler extends DefaultHandler {
 			}
 		}
 
-		if (countOfDocs == 20000) {
+		if (countOfDocs == BLOCK_SIZE) {
 			try {
 				saveTodisk();
 				tokenTree.clear();
@@ -345,6 +328,8 @@ class UserHandler extends DefaultHandler {
 
 	private void saveTodisk() throws IOException {
 
+		System.out.println("Last Page ID: " + pageId);
+		System.out.print("Saving the file: " + OutFileName + fileIndex + "... ");
 		outFile = new FileWriter(OutFileName + fileIndex);
 		fileIndex++;
 
@@ -383,6 +368,8 @@ class UserHandler extends DefaultHandler {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
+
+		System.out.println("Done");
 	}
 
 }

@@ -4,11 +4,20 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
 
 public class FileMerger {
 
+	/**
+	 * Constants
+	 */
+	private int PRIMARY_INDEX_SEGMENT_SIZE = 5000;
+
 	private String pathToParentDir;
 	private String outputFile;
+
+	private int countOfTerms = PRIMARY_INDEX_SEGMENT_SIZE;
 
 	ArrayList<StringBuilder> values = new ArrayList<StringBuilder>();
 	ArrayList<StringBuilder> keys = new ArrayList<StringBuilder>();
@@ -21,10 +30,26 @@ public class FileMerger {
 
 	public void startMerging() throws IOException {
 
+		System.out.println(pathToParentDir);
 		File parentDir = new File(pathToParentDir);
-		FileWriter writer = new FileWriter(outputFile);
+		FileWriter primaryIndexWriter = null;
+		FileWriter secondaryIndexWriter = new FileWriter(outputFile + "/index.SecondaryIndex");
+
 		String files[] = parentDir.list();
+		Arrays.sort(files, new Comparator<String>() {
+			public int compare(String f1, String f2) {
+				try {
+					int i1 = Integer.parseInt(f1.substring(f1.indexOf('-') + 1));
+					int i2 = Integer.parseInt(f2.substring(f2.indexOf('-') + 1));
+					return i1 - i2;
+				} catch (NumberFormatException e) {
+					throw new AssertionError(e);
+				}
+			}
+		});
+
 		int countOfFiles = parentDir.list().length;
+		int primaryIndexFileCount = 0;
 		StringBuilder tempSB = new StringBuilder();
 
 		for (int fileIndex = 0; fileIndex < countOfFiles; fileIndex++) {
@@ -44,13 +69,29 @@ public class FileMerger {
 		}
 
 		StringBuilder previousKey = new StringBuilder();
+		countOfFiles = 0;
 		while (!buffReaderForFiles.isEmpty()) {
 
 			int minIndex = getIndexForMinFile();
 			if (previousKey.equals(keys.get(minIndex)))
-				writer.append(values.get(minIndex));
-			else
-				writer.append("\n").append(keys.get(minIndex)).append(":").append(values.get(minIndex));
+				primaryIndexWriter.append(values.get(minIndex));
+			else {
+				if (countOfTerms == PRIMARY_INDEX_SEGMENT_SIZE) {
+					try {
+						primaryIndexWriter.close();
+					} catch (Exception ex) {
+						System.out.println("File is not open ");
+					}
+					primaryIndexWriter = new FileWriter(outputFile + "/index-" + countOfFiles);
+					secondaryIndexWriter.append(keys.get(minIndex)).append(":")
+							.append(outputFile + "/index-" + countOfFiles).append(",");
+					countOfFiles++;
+					countOfTerms = 0;
+				}
+				primaryIndexWriter.append("\n").append(keys.get(minIndex)).append(":").append(values.get(minIndex));
+				countOfTerms++;
+			}
+
 			previousKey.setLength(0);
 			previousKey.append(keys.get(minIndex));
 
@@ -72,7 +113,9 @@ public class FileMerger {
 			values.get(minIndex).setLength(0);
 			values.get(minIndex).append(str.substring(postingListStartsAt + 1));
 		}
-		writer.close();
+		if (countOfTerms > 0 && countOfTerms != PRIMARY_INDEX_SEGMENT_SIZE)
+			primaryIndexWriter.close();
+		secondaryIndexWriter.close();
 	}
 
 	private int getIndexForMinFile() {
@@ -80,7 +123,7 @@ public class FileMerger {
 		int pointerToMinIndex = 0;
 
 		for (int i = 1; i < keys.size(); i++) {
-			if (keys.get(pointerToMinIndex).toString().compareTo(keys.get(i).toString()) < 0)
+			if (keys.get(pointerToMinIndex).toString().compareTo(keys.get(i).toString()) > 0)
 				pointerToMinIndex = i;
 		}
 
