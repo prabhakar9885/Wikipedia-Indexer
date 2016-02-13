@@ -16,7 +16,7 @@ import SharedDS.UtilFuncs;
 
 class UserHandler extends DefaultHandler {
 
-	private static final int BLOCK_SIZE = 20000;
+	private static final int BLOCK_SIZE = 2000;
 	boolean pageFound = false;
 	boolean pageIdFound = false;
 	boolean pageIdSet = false;
@@ -213,6 +213,9 @@ class UserHandler extends DefaultHandler {
 		TreeMap<Integer, PageInfo> piTreeMap;
 		for (String token : strList) {
 			token = token.trim();
+
+			if (token.length() < 3 || token.length() > 10)
+				continue;
 
 			/*
 			 * Update the word frequency in the in-memory object piHastTable

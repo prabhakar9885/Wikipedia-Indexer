@@ -12,17 +12,16 @@ public class FileMerger {
 	/**
 	 * Constants
 	 */
-	private int PRIMARY_INDEX_SEGMENT_SIZE = 5000;
+	private int SECONDARY_INDEX_SKIPS = 5000;
 
 	private String pathToParentDir;
 	private String outputFile;
 
-	private int countOfTerms = PRIMARY_INDEX_SEGMENT_SIZE;
+	private int countOfTerms = SECONDARY_INDEX_SKIPS;
 
 	ArrayList<StringBuilder> values = new ArrayList<StringBuilder>();
 	ArrayList<StringBuilder> keys = new ArrayList<StringBuilder>();
 	ArrayList<BufferedReader> buffReaderForFiles = new ArrayList<BufferedReader>();
-
 
 	public FileMerger(String parentDir, String outputFile) {
 		pathToParentDir = parentDir;
@@ -33,9 +32,11 @@ public class FileMerger {
 
 		System.out.println(pathToParentDir);
 		File parentDir = new File(pathToParentDir);
-		FileWriter primaryIndexWriter = null;
+		FileWriter mergedIndexWriter = new FileWriter(outputFile + "/postings");
+		FileWriter primaryIndexWriter = new FileWriter(outputFile + "/index.PrimaryIndex");
 		FileWriter secondaryIndexWriter = new FileWriter(outputFile + "/index.SecondaryIndex");
 
+		// Sort the file-names in the Alphabetically order.
 		String files[] = parentDir.list();
 		Arrays.sort(files, new Comparator<String>() {
 			public int compare(String f1, String f2) {
@@ -69,27 +70,37 @@ public class FileMerger {
 		}
 
 		StringBuilder previousKey = new StringBuilder();
-		countOfFiles = 0;
-		while (!buffReaderForFiles.isEmpty()) {
+		StringBuilder tempSBForMergedIndex = new StringBuilder();
+		StringBuilder tempSBForPrimIndex = new StringBuilder();
+		long byteOffsetInPrimaryIndexFile = 0, byteOffsetInMergedIndex = 0;
 
+		while (!buffReaderForFiles.isEmpty()) {
 			int minIndex = getIndexForMinFile();
-			if (previousKey.toString().equals(keys.get(minIndex).toString()))
-				primaryIndexWriter.append(values.get(minIndex));
-			else {
-				if (countOfTerms == PRIMARY_INDEX_SEGMENT_SIZE) {
-					try {
-						primaryIndexWriter.close();
-					} catch (Exception ex) {
-						System.out.println("File is not open ");
-					}
-					primaryIndexWriter = new FileWriter(outputFile + "/" + countOfFiles);
-					secondaryIndexWriter.append(keys.get(minIndex)).append(":").append(countOfFiles + "").append(",");
-					System.out.println("Indexing from: " + keys.get(minIndex) + " : " + countOfFiles);
-					countOfFiles++;
+			if (previousKey.toString().equals(keys.get(minIndex).toString())) {
+				// If the Key is already added to the MergedIndexFile, append
+				// the corresponding value to the MergedIndexFile and update the
+				// byteOffsetInMergedIndex
+				mergedIndexWriter.append(values.get(minIndex));
+				byteOffsetInMergedIndex += values.get(minIndex).length();
+			} else {
+				// else, append the <key,value> pair to the MergedIndexFile and,
+				// 1. Add the entry <key,byteOffsetInMergedIndex> to the
+				// PrimaryIndexFile and update the byteOffsetInMergedIndex
+				// 2. If countOfTerms == SECONDARY_INDEX_SKIPS, update
+				tempSBForMergedIndex.setLength(0);
+				tempSBForMergedIndex.append("\n").append(keys.get(minIndex)).append(":").append(values.get(minIndex));
+				mergedIndexWriter.append(tempSBForMergedIndex);
+				tempSBForPrimIndex.setLength(0);
+				tempSBForPrimIndex.append(keys.get(minIndex)).append(":").append(byteOffsetInMergedIndex).append("\n");
+				byteOffsetInMergedIndex += tempSBForMergedIndex.length();
+				primaryIndexWriter.append(tempSBForPrimIndex);
+				if (countOfTerms == SECONDARY_INDEX_SKIPS) {
+					secondaryIndexWriter.append(keys.get(minIndex)).append(":")
+							.append(byteOffsetInPrimaryIndexFile + ",");
 					countOfTerms = 0;
-				}
-				primaryIndexWriter.append("\n").append(keys.get(minIndex)).append(":").append(values.get(minIndex));
-				countOfTerms++;
+				} else
+					countOfTerms++;
+				byteOffsetInPrimaryIndexFile += tempSBForPrimIndex.length();
 			}
 
 			previousKey.setLength(0);
@@ -113,8 +124,9 @@ public class FileMerger {
 			values.get(minIndex).setLength(0);
 			values.get(minIndex).append(str.substring(postingListStartsAt + 1));
 		}
-		if (countOfTerms > 0 && countOfTerms != PRIMARY_INDEX_SEGMENT_SIZE)
-			primaryIndexWriter.close();
+
+		mergedIndexWriter.close();
+		primaryIndexWriter.close();
 		secondaryIndexWriter.close();
 	}
 
