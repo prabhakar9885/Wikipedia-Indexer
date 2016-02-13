@@ -25,11 +25,11 @@ public class Main {
 
 			// Create Segmented Index Files
 			File dir = new File(args[1] + "/tempIndex");
-			dir.mkdir();
-			userhandler.OutFileName = dir.getAbsolutePath();
-			inputFile = new File(args[0]);
-			userhandler.tokenTree = new TreeMap<String, TreeMap<Integer, PageInfo>>();
-			saxParser.parse(inputFile, userhandler);
+//			dir.mkdir();
+//			userhandler.OutFileName = dir.getAbsolutePath();
+//			inputFile = new File(args[0]);
+//			userhandler.tokenTree = new TreeMap<String, TreeMap<Integer, PageInfo>>();
+//			saxParser.parse(inputFile, userhandler);
 			System.out.println("Segments Created.");
 
 			// Merge Segmented Index Files

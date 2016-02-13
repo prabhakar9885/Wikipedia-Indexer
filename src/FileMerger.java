@@ -23,6 +23,7 @@ public class FileMerger {
 	ArrayList<StringBuilder> keys = new ArrayList<StringBuilder>();
 	ArrayList<BufferedReader> buffReaderForFiles = new ArrayList<BufferedReader>();
 
+
 	public FileMerger(String parentDir, String outputFile) {
 		pathToParentDir = parentDir;
 		this.outputFile = outputFile;
@@ -49,7 +50,6 @@ public class FileMerger {
 		});
 
 		int countOfFiles = parentDir.list().length;
-		int primaryIndexFileCount = 0;
 		StringBuilder tempSB = new StringBuilder();
 
 		for (int fileIndex = 0; fileIndex < countOfFiles; fileIndex++) {
@@ -73,7 +73,7 @@ public class FileMerger {
 		while (!buffReaderForFiles.isEmpty()) {
 
 			int minIndex = getIndexForMinFile();
-			if (previousKey.equals(keys.get(minIndex)))
+			if (previousKey.toString().equals(keys.get(minIndex).toString()))
 				primaryIndexWriter.append(values.get(minIndex));
 			else {
 				if (countOfTerms == PRIMARY_INDEX_SEGMENT_SIZE) {
@@ -83,8 +83,8 @@ public class FileMerger {
 						System.out.println("File is not open ");
 					}
 					primaryIndexWriter = new FileWriter(outputFile + "/" + countOfFiles);
-					secondaryIndexWriter.append(keys.get(minIndex)).append(":")
-							.append(outputFile + "/" + countOfFiles).append(",");
+					secondaryIndexWriter.append(keys.get(minIndex)).append(":").append(countOfFiles + "").append(",");
+					System.out.println("Indexing from: " + keys.get(minIndex) + " : " + countOfFiles);
 					countOfFiles++;
 					countOfTerms = 0;
 				}
