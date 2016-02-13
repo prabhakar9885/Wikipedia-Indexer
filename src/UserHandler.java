@@ -330,7 +330,7 @@ class UserHandler extends DefaultHandler {
 
 		System.out.println("Last Page ID: " + pageId);
 		System.out.print("Saving the file: " + OutFileName + fileIndex + "... ");
-		outFile = new FileWriter(OutFileName + fileIndex);
+		outFile = new FileWriter(OutFileName + "/" + fileIndex);
 		fileIndex++;
 
 		for (Map.Entry<String, TreeMap<Integer, PageInfo>> entry : tokenTree.entrySet()) {

@@ -82,9 +82,9 @@ public class FileMerger {
 					} catch (Exception ex) {
 						System.out.println("File is not open ");
 					}
-					primaryIndexWriter = new FileWriter(outputFile + "/index-" + countOfFiles);
+					primaryIndexWriter = new FileWriter(outputFile + "/" + countOfFiles);
 					secondaryIndexWriter.append(keys.get(minIndex)).append(":")
-							.append(outputFile + "/index-" + countOfFiles).append(",");
+							.append(outputFile + "/" + countOfFiles).append(",");
 					countOfFiles++;
 					countOfTerms = 0;
 				}
