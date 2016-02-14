@@ -16,7 +16,7 @@ import SharedDS.UtilFuncs;
 
 class UserHandler extends DefaultHandler {
 
-	private static final int BLOCK_SIZE = 2000;
+	private static final int BLOCK_SIZE = 10000;
 	boolean pageFound = false;
 	boolean pageIdFound = false;
 	boolean pageIdSet = false;

@@ -139,7 +139,7 @@ public class FileMerger {
 				primaryIndexWriter.append(tempSBForPrimIndex);
 				if (countOfTerms == SECONDARY_INDEX_SKIPS) {
 					secondaryIndexWriter.append(keys.get(minIndex)).append(":")
-							.append(byteOffsetInPrimaryIndexFile + ",");
+							.append(byteOffsetInPrimaryIndexFile + "\n");
 					countOfTerms = 0;
 				} else
 					countOfTerms++;
