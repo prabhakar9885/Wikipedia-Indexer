@@ -6,6 +6,9 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
+import java.util.StringTokenizer;
+
+import org.apache.commons.lang3.StringUtils;
 
 public class FileMerger {
 
@@ -16,6 +19,9 @@ public class FileMerger {
 
 	private String pathToParentDir;
 	private String outputFile;
+	private long docsCount;
+	StringBuilder post = new StringBuilder();
+	StringBuilder resSb = new StringBuilder();
 
 	private int countOfTerms = SECONDARY_INDEX_SKIPS;
 
@@ -23,9 +29,41 @@ public class FileMerger {
 	ArrayList<StringBuilder> keys = new ArrayList<StringBuilder>();
 	ArrayList<BufferedReader> buffReaderForFiles = new ArrayList<BufferedReader>();
 
-	public FileMerger(String parentDir, String outputFile) {
+	public FileMerger(String parentDir, String outputFile, long docsCount) {
 		pathToParentDir = parentDir;
 		this.outputFile = outputFile;
+		this.docsCount = docsCount;
+	}
+
+	private String getPostingsWithRank(String postingsList) {
+
+		StringTokenizer stk = new StringTokenizer(postingsList, "|");
+		resSb.setLength(0);
+		while (stk.hasMoreElements()) {
+			String postStr = stk.nextToken();
+			int i = 0;
+
+			// Append DocID to res
+			while (i < postStr.length() && postStr.charAt(i) != '-')
+				resSb.append(postStr.charAt(i++));
+			resSb.append("-");
+			i++;
+
+			// Append rank to res
+			post.setLength(0);
+			while (i < postStr.length() && postStr.charAt(i) >= '0' && postStr.charAt(i) <= '9')
+				post.append(postStr.charAt(i++));
+			double rank = 100 * Double.parseDouble(post.toString())
+					* Math.log10(docsCount / (StringUtils.countMatches(postingsList, '|') + 1));
+
+			// Append Metada-ta about the term in DocID ( T->Title, C->Category,
+			// R->References, I->InfoBox etc)
+			while (i < postStr.length())
+				resSb.append(postStr.charAt(i++));
+			resSb.append("|");
+		}
+
+		return resSb.toString();
 	}
 
 	public void startMerging() throws IOException {
@@ -67,12 +105,13 @@ public class FileMerger {
 				tempSB.append(str.charAt(postingListStartsAt));
 			keys.add(new StringBuilder(tempSB.toString()));
 			values.add(new StringBuilder(str.substring(postingListStartsAt + 1)));
+			getPostingsWithRank(str.substring(postingListStartsAt + 2));
 		}
 
 		StringBuilder previousKey = new StringBuilder();
 		StringBuilder tempSBForMergedIndex = new StringBuilder();
 		StringBuilder tempSBForPrimIndex = new StringBuilder();
-		long byteOffsetInPrimaryIndexFile = 0, byteOffsetInMergedIndex = 0;
+		long byteOffsetInPrimaryIndexFile = 0, byteOffsetInMergedIndex = 1;
 
 		while (!buffReaderForFiles.isEmpty()) {
 			int minIndex = getIndexForMinFile();

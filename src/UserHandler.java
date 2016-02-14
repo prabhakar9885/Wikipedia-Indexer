@@ -24,7 +24,9 @@ class UserHandler extends DefaultHandler {
 	boolean bodyFound = false;
 	private int curlyBracesAfterInfoBox = 0;
 
-	private int pageId = -1, countOfDocs = 0, fileIndex = 0;
+	private int pageId = -1, countOfDocsForBlock = 0, fileIndex = 0;
+
+	public int docsCount = 0;
 
 	HashSet<String> tokensInTitle = new HashSet<String>();
 	String infoText;
@@ -44,7 +46,8 @@ class UserHandler extends DefaultHandler {
 		str.setLength(0);
 
 		if (qName.equalsIgnoreCase("page")) {
-			countOfDocs++;
+			countOfDocsForBlock++;
+			docsCount++;
 			infoboxMap.clear();
 			categoryMap.clear();
 			refMap.clear();
@@ -204,7 +207,6 @@ class UserHandler extends DefaultHandler {
 				System.out.println("DocId: " + pageId);
 				System.out.println("Stack trace" + ex.getStackTrace());
 			}
-
 		}
 
 		ArrayList<String> strList = UtilFuncs.getTokensAsList(s.replaceAll("[^a-z0-9]+", " "), " ");
@@ -229,6 +231,7 @@ class UserHandler extends DefaultHandler {
 					piTreeMap.put(pageId, pi);
 				} else
 					pi.frequency++;
+				pi.noOfTerms++;
 			} else {
 				piTreeMap = new TreeMap<Integer, PageInfo>();
 				pi = new PageInfo();
@@ -238,6 +241,7 @@ class UserHandler extends DefaultHandler {
 					tokensInTitle.add(token);
 				else
 					tokenTree.put(token, piTreeMap);
+				pi.noOfTerms++;
 			}
 
 			if (qName.equalsIgnoreCase("text")) {
@@ -245,11 +249,11 @@ class UserHandler extends DefaultHandler {
 			}
 		}
 
-		if (countOfDocs == BLOCK_SIZE) {
+		if (countOfDocsForBlock == BLOCK_SIZE) {
 			try {
 				saveTodisk();
 				tokenTree.clear();
-				countOfDocs = 0;
+				countOfDocsForBlock = 0;
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -285,6 +289,7 @@ class UserHandler extends DefaultHandler {
 				if (pi == null) {
 					pi = new PageInfo();
 					pi.titleFrequeny = 1;
+					pi.noOfTermsInTitle = tokensInTitle.size();
 					piTreeMap.put(pageId, pi);
 				} else
 					pi.titleFrequeny++;
@@ -305,9 +310,11 @@ class UserHandler extends DefaultHandler {
 	private void updateFrequeniesInPagInfoObj(String token, PageInfo pi, TreeMap<Integer, PageInfo> piTreeMap) {
 		if (pi.infoboxFrequeny == 0 && infoboxMap.containsKey(token)) {
 			pi.infoboxFrequeny = infoboxMap.get(token);
+			pi.noOfTermsInCategory = infoboxMap.size();
 		}
 		if (pi.categoryFrequeny == 0 && categoryMap.containsKey(token)) {
 			pi.categoryFrequeny = categoryMap.get(token);
+			pi.noOfTermsInCategory = categoryMap.size();
 		}
 		if (pi.refFrequeny == 0 && refMap.containsKey(token)) {
 			pi.refFrequeny = refMap.get(token);
@@ -321,7 +328,7 @@ class UserHandler extends DefaultHandler {
 	public void endDocument() throws SAXException {
 
 		try {
-			if (countOfDocs != 0)
+			if (countOfDocsForBlock != 0)
 				saveTodisk();
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
@@ -335,6 +342,7 @@ class UserHandler extends DefaultHandler {
 		System.out.print("Saving the file: " + OutFileName + fileIndex + "... ");
 		outFile = new FileWriter(OutFileName + "/" + fileIndex);
 		fileIndex++;
+		boolean isFirstLine = true;
 
 		for (Map.Entry<String, TreeMap<Integer, PageInfo>> entry : tokenTree.entrySet()) {
 			String key = entry.getKey();
@@ -351,16 +359,17 @@ class UserHandler extends DefaultHandler {
 				if (keys.size() <= 1)
 					continue;
 
-				outFile.write("\n" + key + ":");
+				if (!isFirstLine)
+					outFile.write("\n");
+				isFirstLine = false;
+				outFile.write(key + ":");
 
 				for (Integer pageId : keys) {
 					PageInfo pi = ht.get(pageId);
-					outFile.write("|" + pageId + "-" + pi.frequency
-							+ (pi.categoryFrequeny > 0 ? "C" + pi.categoryFrequeny : "")
-							+ (pi.infoboxFrequeny > 0 ? "I" + pi.infoboxFrequeny : "")
-							+ (pi.titleFrequeny > 0 ? "T" + pi.titleFrequeny : "")
-							+ (pi.refFrequeny > 0 ? "R" + pi.refFrequeny : "")
-							+ (pi.extLinkFrequeny > 0 ? "E" + pi.extLinkFrequeny : ""));
+					pi.computeWightedSum();
+					outFile.write("|" + pageId + "-" + pi.frequency + (pi.categoryFrequeny > 0 ? "C" : "")
+							+ (pi.infoboxFrequeny > 0 ? "I" : "") + (pi.titleFrequeny > 0 ? "T" : "")
+							+ (pi.refFrequeny > 0 ? "R" : "") + (pi.extLinkFrequeny > 0 ? "E" : ""));
 				}
 			} catch (IOException e) {
 				e.printStackTrace();
