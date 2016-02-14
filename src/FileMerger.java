@@ -35,7 +35,7 @@ public class FileMerger {
 		this.docsCount = docsCount;
 	}
 
-	private String getPostingsWithRank(String postingsList) {
+	private StringBuilder getPostingsWithRank(String postingsList) {
 
 		StringTokenizer stk = new StringTokenizer(postingsList, "|");
 		resSb.setLength(0);
@@ -53,17 +53,20 @@ public class FileMerger {
 			post.setLength(0);
 			while (i < postStr.length() && postStr.charAt(i) >= '0' && postStr.charAt(i) <= '9')
 				post.append(postStr.charAt(i++));
-			double rank = 100 * Double.parseDouble(post.toString())
+			double rank = 10 * Double.parseDouble(post.toString())
 					* Math.log10(docsCount / (StringUtils.countMatches(postingsList, '|') + 1));
+			resSb.append((long) rank);
 
 			// Append Metada-ta about the term in DocID ( T->Title, C->Category,
 			// R->References, I->InfoBox etc)
+			if (i < postStr.length())
+				resSb.append("-");
 			while (i < postStr.length())
 				resSb.append(postStr.charAt(i++));
 			resSb.append("|");
 		}
 
-		return resSb.toString();
+		return resSb;
 	}
 
 	public void startMerging() throws IOException {
@@ -104,8 +107,9 @@ public class FileMerger {
 			for (; postingListStartsAt < 30 && str.charAt(postingListStartsAt) != ':'; postingListStartsAt++)
 				tempSB.append(str.charAt(postingListStartsAt));
 			keys.add(new StringBuilder(tempSB.toString()));
-			values.add(new StringBuilder(str.substring(postingListStartsAt + 1)));
-			getPostingsWithRank(str.substring(postingListStartsAt + 2));
+			// values.add(new StringBuilder(str.substring(postingListStartsAt +
+			// 1)));;
+			values.add(new StringBuilder(getPostingsWithRank(str.substring(postingListStartsAt + 2))));
 		}
 
 		StringBuilder previousKey = new StringBuilder();
@@ -161,7 +165,9 @@ public class FileMerger {
 			keys.get(minIndex).setLength(0);
 			keys.get(minIndex).append(tempSB.toString());
 			values.get(minIndex).setLength(0);
-			values.get(minIndex).append(str.substring(postingListStartsAt + 1));
+			// values.get(minIndex).append(str.substring(postingListStartsAt +
+			// 1));
+			values.get(minIndex).append(getPostingsWithRank(str.substring(postingListStartsAt + 2)));
 		}
 
 		mergedIndexWriter.close();
