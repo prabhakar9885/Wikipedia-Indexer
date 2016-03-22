@@ -9,7 +9,7 @@ package SharedDS;
  */
 
 public class Stemmer {
-	private char[] b;
+	private char[] b = new char[50];
 	private int i, /* offset into b */
 			i_end, /* offset to end of stemmed word */
 			j, k;
@@ -17,7 +17,7 @@ public class Stemmer {
 
 	/* unit of size whereby b is increased */
 	public Stemmer() {
-		b = new char[INC];
+		// b = new char[INC];
 		i = 0;
 		i_end = 0;
 	}

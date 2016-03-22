@@ -9,6 +9,8 @@ public class UtilFuncs {
 
 	private static Stemmer stemmer = new Stemmer();
 	private static StopWords sw = new StopWords();
+	
+	static Pattern p = Pattern.compile("[0-9]{4,}");
 
 	public static ArrayList<String> getTokensAsList(String textStr, String delim) {
 		ArrayList<String> tokensList = new ArrayList<String>();
@@ -24,7 +26,11 @@ public class UtilFuncs {
 			stemmer.add(temp);
 			stemmer.stem();
 			temp = stemmer.toString();
-			if (temp.length() > 0)
+			Matcher m = p.matcher(temp);
+			
+			if(m.matches())
+				continue;
+			if (temp.length() > 0 && temp.length()<10)
 				tokensList.add(temp.trim());
 		}
 		return tokensList;

@@ -1,11 +1,16 @@
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
-import java.util.ArrayList;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.Reader;
 import java.util.TreeMap;
 
 import javax.xml.parsers.SAXParser;
 import javax.xml.parsers.SAXParserFactory;
+
+import org.xml.sax.InputSource;
 
 import SharedDS.PageInfo;
 
@@ -34,7 +39,11 @@ public class Main {
 			userhandler.OutFileName = dir.getAbsolutePath();
 			inputFile = new File(args[0]);
 			userhandler.tokenTree = new TreeMap<String, TreeMap<Integer, PageInfo>>();
-			saxParser.parse(inputFile, userhandler);
+			InputStream inputStream = new FileInputStream(inputFile);
+			Reader reader = new InputStreamReader(inputStream, "UTF-8");
+			InputSource is = new InputSource(reader);
+			is.setEncoding("UTF-8");
+			saxParser.parse(is, userhandler);
 			System.out.println("Segments Created.");
 
 			// Write-back N to File

@@ -222,30 +222,36 @@ class UserHandler extends DefaultHandler {
 			/*
 			 * Update the word frequency in the in-memory object piHastTable
 			 */
-			if (tokenTree.containsKey(token)) {
-				piTreeMap = tokenTree.get(token);
-				pi = piTreeMap.get(pageId);
-				if (pi == null) {
+			try {
+				if (tokenTree.containsKey(token)) {
+					piTreeMap = tokenTree.get(token);
+					pi = piTreeMap.get(pageId);
+					if (pi == null) {
+						pi = new PageInfo();
+						pi.frequency = 1;
+						piTreeMap.put(pageId, pi);
+					} else
+						pi.frequency++;
+					pi.noOfTerms++;
+				} else {
+					piTreeMap = new TreeMap<Integer, PageInfo>();
 					pi = new PageInfo();
 					pi.frequency = 1;
 					piTreeMap.put(pageId, pi);
-				} else
-					pi.frequency++;
-				pi.noOfTerms++;
-			} else {
-				piTreeMap = new TreeMap<Integer, PageInfo>();
-				pi = new PageInfo();
-				pi.frequency = 1;
-				piTreeMap.put(pageId, pi);
-				if (qName.equalsIgnoreCase("title"))
-					tokensInTitle.add(token);
-				else
-					tokenTree.put(token, piTreeMap);
-				pi.noOfTerms++;
-			}
+					if (qName.equalsIgnoreCase("title"))
+						tokensInTitle.add(token);
+					else
+						tokenTree.put(token, piTreeMap);
+					pi.noOfTerms++;
+				}
 
-			if (qName.equalsIgnoreCase("text")) {
-				updateFrequeniesInPagInfoObj(token, pi, piTreeMap);
+				if (qName.equalsIgnoreCase("text")) {
+					updateFrequeniesInPagInfoObj(token, pi, piTreeMap);
+				}
+			} catch (Exception ex) {
+				System.out.println("Exception while updating the TreeMap: " + ex.getMessage());
+				System.out.println("DocId: " + pageId);
+				System.out.println("Stack trace" + ex.getStackTrace());
 			}
 		}
 
@@ -283,22 +289,28 @@ class UserHandler extends DefaultHandler {
 		PageInfo pi;
 		TreeMap<Integer, PageInfo> piTreeMap;
 		for (String str : tokensInTitle) {
-			if (tokenTree.containsKey(str.toString().trim())) {
-				piTreeMap = tokenTree.get(str.toString().trim());
-				pi = piTreeMap.get(pageId);
-				if (pi == null) {
+			try {
+				if (tokenTree.containsKey(str.toString().trim())) {
+					piTreeMap = tokenTree.get(str.toString().trim());
+					pi = piTreeMap.get(pageId);
+					if (pi == null) {
+						pi = new PageInfo();
+						pi.titleFrequeny = 1;
+						pi.noOfTermsInTitle = tokensInTitle.size();
+						piTreeMap.put(pageId, pi);
+					} else
+						pi.titleFrequeny++;
+				} else {
+					piTreeMap = new TreeMap<Integer, PageInfo>();
 					pi = new PageInfo();
 					pi.titleFrequeny = 1;
-					pi.noOfTermsInTitle = tokensInTitle.size();
 					piTreeMap.put(pageId, pi);
-				} else
-					pi.titleFrequeny++;
-			} else {
-				piTreeMap = new TreeMap<Integer, PageInfo>();
-				pi = new PageInfo();
-				pi.titleFrequeny = 1;
-				piTreeMap.put(pageId, pi);
-				tokenTree.put(str.toString().trim(), piTreeMap);
+					tokenTree.put(str.toString().trim(), piTreeMap);
+				}
+			} catch (Exception ex) {
+				System.out.println("Exception while Idexing Title: " + ex.getMessage());
+				System.out.println("DocId: " + pageId);
+				System.out.println("Stack trace" + ex.getStackTrace());
 			}
 		}
 	}
@@ -308,21 +320,27 @@ class UserHandler extends DefaultHandler {
 	 * object <i>pi</i>
 	 */
 	private void updateFrequeniesInPagInfoObj(String token, PageInfo pi, TreeMap<Integer, PageInfo> piTreeMap) {
-		if (pi.infoboxFrequeny == 0 && infoboxMap.containsKey(token)) {
-			pi.infoboxFrequeny = infoboxMap.get(token);
-			pi.noOfTermsInCategory = infoboxMap.size();
+		try {
+			if (pi.infoboxFrequeny == 0 && infoboxMap.containsKey(token)) {
+				pi.infoboxFrequeny = infoboxMap.get(token);
+				pi.noOfTermsInCategory = infoboxMap.size();
+			}
+			if (pi.categoryFrequeny == 0 && categoryMap.containsKey(token)) {
+				pi.categoryFrequeny = categoryMap.get(token);
+				pi.noOfTermsInCategory = categoryMap.size();
+			}
+			if (pi.refFrequeny == 0 && refMap.containsKey(token)) {
+				pi.refFrequeny = refMap.get(token);
+			}
+			if (pi.extLinkFrequeny == 0 && extLinksMap.containsKey(token)) {
+				pi.extLinkFrequeny = extLinksMap.get(token);
+			}
+			piTreeMap.put(pageId, pi);
+		} catch (Exception ex) {
+			System.out.println("Exception while Idexing Infobox: " + ex.getMessage());
+			System.out.println("DocId: " + pageId);
+			System.out.println("Stack trace" + ex.getStackTrace());
 		}
-		if (pi.categoryFrequeny == 0 && categoryMap.containsKey(token)) {
-			pi.categoryFrequeny = categoryMap.get(token);
-			pi.noOfTermsInCategory = categoryMap.size();
-		}
-		if (pi.refFrequeny == 0 && refMap.containsKey(token)) {
-			pi.refFrequeny = refMap.get(token);
-		}
-		if (pi.extLinkFrequeny == 0 && extLinksMap.containsKey(token)) {
-			pi.extLinkFrequeny = extLinksMap.get(token);
-		}
-		piTreeMap.put(pageId, pi);
 	}
 
 	public void endDocument() throws SAXException {

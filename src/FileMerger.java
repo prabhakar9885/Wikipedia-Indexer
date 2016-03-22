@@ -7,6 +7,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.StringTokenizer;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 
@@ -22,6 +24,7 @@ public class FileMerger {
 	private long docsCount;
 	StringBuilder post = new StringBuilder();
 	StringBuilder resSb = new StringBuilder();
+	static Pattern p = Pattern.compile("[0-9]{5,}");
 
 	private int countOfTerms = SECONDARY_INDEX_SKIPS;
 
@@ -53,11 +56,11 @@ public class FileMerger {
 			post.setLength(0);
 			while (i < postStr.length() && postStr.charAt(i) >= '0' && postStr.charAt(i) <= '9')
 				post.append(postStr.charAt(i++));
-			double rank = 10 * Double.parseDouble(post.toString())
+			double rank = 10 * Math.log10(Double.parseDouble(post.toString()))
 					* Math.log10(docsCount / (StringUtils.countMatches(postingsList, '|') + 1));
 			resSb.append((long) rank);
 
-			// Append Metada-ta about the term in DocID ( T->Title, C->Category,
+			// Append Metadata about the term in DocID ( T->Title, C->Category,
 			// R->References, I->InfoBox etc)
 			if (i < postStr.length())
 				resSb.append("-");
@@ -107,8 +110,6 @@ public class FileMerger {
 			for (; postingListStartsAt < 30 && str.charAt(postingListStartsAt) != ':'; postingListStartsAt++)
 				tempSB.append(str.charAt(postingListStartsAt));
 			keys.add(new StringBuilder(tempSB.toString()));
-			// values.add(new StringBuilder(str.substring(postingListStartsAt +
-			// 1)));;
 			values.add(new StringBuilder(getPostingsWithRank(str.substring(postingListStartsAt + 2))));
 		}
 
@@ -123,8 +124,13 @@ public class FileMerger {
 				// If the Key is already added to the MergedIndexFile, append
 				// the corresponding value to the MergedIndexFile and update the
 				// byteOffsetInMergedIndex
-				mergedIndexWriter.append(values.get(minIndex));
-				byteOffsetInMergedIndex += values.get(minIndex).length();
+				Matcher m = p.matcher(keys.get(minIndex).toString());
+				if (!m.matches()) {
+					mergedIndexWriter.append(values.get(minIndex));
+					byteOffsetInMergedIndex += values.get(minIndex).length();
+					previousKey.setLength(0);
+					previousKey.append(keys.get(minIndex));
+				}
 			} else {
 				// else, append the <key,value> pair to the MergedIndexFile and,
 				// 1. Add the entry <key,byteOffsetInMergedIndex> to the
@@ -145,9 +151,6 @@ public class FileMerger {
 					countOfTerms++;
 				byteOffsetInPrimaryIndexFile += tempSBForPrimIndex.length();
 			}
-
-			previousKey.setLength(0);
-			previousKey.append(keys.get(minIndex));
 
 			String str = buffReaderForFiles.get(minIndex).readLine();
 			if (str == null) {

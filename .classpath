@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8"/>
-	<classpathentry kind="lib" path="/home/prabhakar/IIIT-H_current/Sem 2/IRE/Mini-Project/commons-lang3-3.4.jar">
+<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/java-8-oracle"/>
+	<classpathentry kind="lib" path="/home/prabhakar/IIIT-H_current/Sem 2/IAS/Workspace/WikiIndexer/ExternalLib/commons-lang3-3.4.jar">
 		<attributes>
-			<attribute name="javadoc_location" value="jar:file:/home/prabhakar/IIIT-H_current/Sem%202/IRE/Mini-Project/commons-lang3-3.4-javadoc.jar!/"/>
+			<attribute name="javadoc_location" value="jar:file:/home/prabhakar/IIIT-H_current/Sem%202/IAS/Workspace/WikiIndexer/ExternalLib/commons-lang3-3.4-javadoc.jar!/"/>
+		</attributes>
+	</classpathentry>
+	<classpathentry kind="lib" path="/home/prabhakar/IIIT-H_current/Sem 2/IAS/Workspace/WikiIndexer/ExternalLib/xercesImpl.jar">
+		<attributes>
+			<attribute name="javadoc_location" value="file:/home/prabhakar/IIIT-H_current/Sem%202/IAS/Workspace/WikiIndexer/ExternalLib/xerces2/"/>
 		</attributes>
 	</classpathentry>
 	<classpathentry kind="output" path="bin"/>

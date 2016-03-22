@@ -17,10 +17,10 @@ public class PageInfo {
 	}
 
 	public void computeWightedSum() {
-		rank = (long) ((noOfTermsInTitle > 0 ? 25000 * titleFrequeny * 1.0 / noOfTermsInTitle : 0)
-				+ 4000 * (noOfTermsInInfoBox > 0 ? infoboxFrequeny * 1.0 / noOfTermsInInfoBox : 0)
-				+ 1000 * (noOfTermsInCategory > 0 ? categoryFrequeny * 1.0 / noOfTermsInCategory : 0)
-				+ 100 * (frequency * 1.0 / noOfTerms));
+		rank = (long)  ( 25000 * titleFrequeny * 1.0 / noOfTermsInTitle 
+				+ 15000 * infoboxFrequeny * 1.0 / noOfTermsInInfoBox 
+				+ 1000 * categoryFrequeny * 1.0 / noOfTermsInCategory 
+				+ 100 * frequency * 1.0 / noOfTerms );
 	}
 
 }
